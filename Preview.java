@@ -18,14 +18,18 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback {
 
     SurfaceView mSurfaceView;
     SurfaceHolder mHolder;
+    SurfaceHolderHandler mHandler;
     Size mPreviewSize;
     List<Camera.Size> mSupportedPreviewSizes;
     Camera mCamera;
 
-    Preview(Context context) {
-        super(context);
+    Preview(SurfaceHolderHandler handler, Camera camera) {
+        super(handler.getContext());
 
-        mSurfaceView = new SurfaceView(context);
+		this.mCamera = camera;
+		this.mHandler = handler;
+
+        mSurfaceView = new SurfaceView(handler.getContext());
         addView(mSurfaceView);
 
         // Install a SurfaceHolder.Callback so we get notified when the
@@ -42,7 +46,13 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback {
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-
+		// The Surface has been created, now tell the camera where to draw the preview.
+		try {
+			mCamera.setPreviewDisplay(holder);
+			mCamera.startPreview();
+		} catch (Throwable e) {
+			Log.d(TAG, "Error setting camera preview: " + e.getMessage());
+		}
     }
 
     public interface SurfaceHolderHandler {
@@ -51,28 +61,16 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback {
         public Context getContext();
     }
 
-
-
-
     public void surfaceDestroyed(SurfaceHolder holder) {
-// Surface will be destroyed when we return, so stop the preview.
-        if (mCamera != null) {
-            // Call stopPreview() to stop updating the preview surface.
-            mCamera.stopPreview();
-        }
+		if (this.mHandler != null) {
+			mHandler.surfaceDestroyed(holder);
+		}
     }
 
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-        // Now that the size is known, set up the camera parameters and begin
-        // the preview.
-        Camera.Parameters parameters = mCamera.getParameters();
-        parameters.setPreviewSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-        requestLayout();
-        mCamera.setParameters(parameters);
-
-        // Important: Call startPreview() to start updating the preview surface.
-        // Preview must be started before you can take a picture.
-        mCamera.startPreview();
+		if (this.mHandler != null) {
+			mHandler.surfaceChanged(holder, format, w, h);
+		}
     }
 
     public void setCamera(Camera camera) {
