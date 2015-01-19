@@ -58,6 +58,7 @@ public class MainActivity extends ActionBarActivity {
 
         mPreview = new Preview(this);
         safeCameraOpen();
+        mPreview.setCamera(mCamera);
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.removeAllViews();
         preview.addView(mPreview);
