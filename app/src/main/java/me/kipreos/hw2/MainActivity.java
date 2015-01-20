@@ -2,32 +2,29 @@ package me.kipreos.hw2;
 
 import android.content.Context;
 import android.hardware.Camera;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
+import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SurfaceHolder;
-import android.view.SurfaceView;
-import android.view.ViewGroup;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.FrameLayout;
-import android.widget.Toast;
-
-import java.io.IOException;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity
+implements Preview.SurfaceHolderHandler {
+
+    private static final String TAG = MainActivity.class.getSimpleName();
+
     private Camera mCamera;
     private Preview mPreview;
+    private byte[] mImageData;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-
-
     }
 
 
@@ -55,15 +52,23 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onResume(){
         super.onResume();
+        initLayout();
+    }
+
+    protected void initLayout() {
+        safeCameraOpen();
+        // Setting the right parameters in the camera
+        Camera.Parameters params = mCamera.getParameters();
+
+        mCamera.setParameters(params);
 
         mPreview = new Preview(this);
-        safeCameraOpen();
         mPreview.setCamera(mCamera);
+
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.removeAllViews();
+
         preview.addView(mPreview);
-
-
     }
 
 
@@ -71,7 +76,7 @@ public class MainActivity extends ActionBarActivity {
         boolean qOpened = false;
 
         try {
-            releaseCameraAndPreview();
+            // releaseCameraAndPreview();
             mCamera = Camera.open();
             qOpened = (mCamera != null);
         } catch (Exception e) {
@@ -90,30 +95,36 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
+    private Camera.PictureCallback mPictureCallback = new Camera.PictureCallback()	{
+        @Override
+        public void onPictureTaken(@Nullable byte[] data, Camera mCamera) {
+            mImageData = data;
+            if (data == null) {
+                return;
+            }
+            Log.d(TAG, "received data with length " + data.length);
+        }
+    };
+
+    @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-		// Surface will be destroyed when we return, so stop the preview.
-        if (mCamera != null) {
-            // Call stopPreview() to stop updating the preview surface.
-            mCamera.stopPreview();
+        Log.d(TAG, "Surface destroyed callback");
+        if (this.mCamera != null) {
+            Log.d(TAG, "Releasing camera");
+            this.mCamera.release();
+            this.mCamera = null;
         }
     }
 
-    public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-        // Now that the size is known, set up the camera parameters and begin
-        // the preview.
-        Camera.Parameters parameters = mCamera.getParameters();
-        parameters.setPreviewSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-        requestLayout();
-        mCamera.setParameters(parameters);
-
-        // Important: Call startPreview() to start updating the preview surface.
-        // Preview must be started before you can take a picture.
-        mCamera.startPreview();
+    @Override
+    public Context getContext() {
+        return this;
     }
 
     @Override
-	public Context getContext() {
-		return this;
-	}
+    public void surfaceChanged(SurfaceHolder holder, int format, int width,
+                               int height) {
+        // Esto sirve para ver si la cámara está activa
+    }
 
 }
